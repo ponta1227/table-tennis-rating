@@ -46,7 +46,7 @@ export default function Home() {
 
     if (!w || !l) return;
 
-    // 簡易 Elo 計算
+    // Elo レート計算
     const k = 32;
     const expectedW = 1 / (1 + Math.pow(10, (l.rating - w.rating) / 400));
     const expectedL = 1 / (1 + Math.pow(10, (w.rating - l.rating) / 400));
@@ -127,25 +127,4 @@ export default function Home() {
       </div>
 
       {/* 選手一覧 */}
-      <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-2xl">
-        <h2 className="text-xl font-semibold mb-4">選手一覧</h2>
-        <table className="w-full border-collapse">
-          <thead className="bg-gray-200">
-            <tr>
-              <th className="p-2">名前</th>
-              <th className="p-2">レート</th>
-            </tr>
-          </thead>
-          <tbody>
-            {players.map((p) => (
-              <tr key={p.id} className="border-b hover:bg-gray-50 text-gray-900">
-                <td className="p-2">{p.name}</td>
-                <td className="p-2">{p.rating}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
+      <div className="bg-white p-6 round
