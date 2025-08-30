@@ -3,11 +3,17 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
 
+type Player = {
+  id: string;
+  name: string;
+  rating: number;
+};
+
 export default function Home() {
-  const [players, setPlayers] = useState<any[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [name, setName] = useState("");
-  const [winner, setWinner] = useState(""); // 勝者
-  const [loser, setLoser] = useState("");   // 敗者
+  const [winner, setWinner] = useState("");
+  const [loser, setLoser] = useState("");
 
   useEffect(() => {
     fetchPlayers();
@@ -37,35 +43,27 @@ export default function Home() {
 
     const w = players.find((p) => p.id === winner);
     const l = players.find((p) => p.id === loser);
+
     if (!w || !l) return;
 
-    const K = 32;
-    const expected = (r1: number, r2: number) =>
-      1 / (1 + Math.pow(10, (r2 - r1) / 400));
+    // 簡易 Elo 計算
+    const k = 32;
+    const expectedW = 1 / (1 + Math.pow(10, (l.rating - w.rating) / 400));
+    const expectedL = 1 / (1 + Math.pow(10, (w.rating - l.rating) / 400));
 
-    // Elo 計算
-    const Ew = expected(w.rating, l.rating);
-    const El = expected(l.rating, w.rating);
+    const newWRating = w.rating + k * (1 - expectedW);
+    const newLRating = l.rating + k * (0 - expectedL);
 
-    const newRw = w.rating + K * (1 - Ew);
-    const newRl = l.rating + K * (0 - El);
+    await supabase.from("players").update({ rating: Math.round(newWRating) }).eq("id", w.id);
+    await supabase.from("players").update({ rating: Math.round(newLRating) }).eq("id", l.id);
 
-    // players 更新
-    await supabase.from("players").update({ rating: Math.round(newRw) }).eq("id", w.id);
-    await supabase.from("players").update({ rating: Math.round(newRl) }).eq("id", l.id);
-
-    // matches に記録
-    await supabase.from("matches").insert([
-      { player_a: w.id, player_b: l.id, winner: w.id },
-    ]);
+    await supabase.from("matches").insert([{ winner_id: w.id, loser_id: l.id }]);
 
     fetchPlayers();
-    setWinner("");
-    setLoser("");
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center py-10 px-4">
+    <div className="min-h-screen bg-gray-100 flex flex-col items-center py-10 px-4 text-gray-900">
       <h1 className="text-3xl font-bold mb-8">🏓 卓球レーティング管理</h1>
 
       {/* 選手登録フォーム */}
@@ -140,7 +138,7 @@ export default function Home() {
           </thead>
           <tbody>
             {players.map((p) => (
-              <tr key={p.id} className="border-b hover:bg-gray-50">
+              <tr key={p.id} className="border-b hover:bg-gray-50 text-gray-900">
                 <td className="p-2">{p.name}</td>
                 <td className="p-2">{p.rating}</td>
               </tr>
