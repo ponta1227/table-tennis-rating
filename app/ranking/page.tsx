@@ -29,7 +29,7 @@ export default function RankingPage() {
     <div style={{ padding: 20 }}>
       <h1>🏓 ランキング</h1>
 <div className="bg-blue-200 p-4">テスト</div>
-      <table border="1" cellPadding="5">
+      <table border={1} cellPadding={5}>
         <thead>
           <tr>
             <th>順位</th>
