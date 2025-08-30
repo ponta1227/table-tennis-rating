@@ -10,57 +10,17 @@ type Player = {
 };
 
 export default function Home() {
-  const [authenticated, setAuthenticated] = useState(false);
-  const [passwordInput, setPasswordInput] = useState("");
-
   const [players, setPlayers] = useState<Player[]>([]);
   const [name, setName] = useState("");
   const [winner, setWinner] = useState("");
   const [loser, setLoser] = useState("");
 
-  // 管理パスワード（環境変数から取得）
-  const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
-
-  // --- 認証画面 ---
-  if (!authenticated) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
-        <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-sm">
-          <h2 className="text-xl font-semibold mb-4">管理画面ログイン</h2>
-          <input
-            type="password"
-            placeholder="パスワードを入力"
-            value={passwordInput}
-            onChange={(e) => setPasswordInput(e.target.value)}
-            className="border p-2 rounded w-full mb-4"
-          />
-          <button
-            onClick={() => {
-              if (passwordInput === adminPassword) {
-                setAuthenticated(true);
-              } else {
-                alert("パスワードが違います");
-              }
-            }}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 w-full"
-          >
-            ログイン
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // --- 管理画面本体 ---
   useEffect(() => {
     fetchPlayers();
   }, []);
 
   async function fetchPlayers() {
-    const { data } = await supabase
-      .from("players")
-      .select("*")
-      .order("rating", { ascending: false });
+    const { data } = await supabase.from("players").select("*").order("rating", { ascending: false });
     if (data) setPlayers(data);
   }
 
@@ -86,7 +46,7 @@ export default function Home() {
 
     if (!w || !l) return;
 
-    // Elo レート計算
+    // 簡易 Elo 計算
     const k = 32;
     const expectedW = 1 / (1 + Math.pow(10, (l.rating - w.rating) / 400));
     const expectedL = 1 / (1 + Math.pow(10, (w.rating - l.rating) / 400));
