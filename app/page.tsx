@@ -9,15 +9,24 @@ type Player = {
   rating: number;
 };
 
+type Match = {
+  id: string;
+  winner_id: string;
+  loser_id: string;
+  created_at: string;
+};
+
 export default function Home() {
   const [players, setPlayers] = useState<Player[]>([]);
+  const [matches, setMatches] = useState<Match[]>([]);
   const [name, setName] = useState("");
-  const [initialRating, setInitialRating] = useState(1500); // 初期値1500
+  const [initialRating, setInitialRating] = useState(1500);
   const [winner, setWinner] = useState("");
   const [loser, setLoser] = useState("");
 
   useEffect(() => {
     fetchPlayers();
+    fetchMatches();
   }, []);
 
   async function fetchPlayers() {
@@ -28,14 +37,24 @@ export default function Home() {
     if (data) setPlayers(data);
   }
 
+  async function fetchMatches() {
+    const { data } = await supabase
+      .from("matches")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(3); // 直近3試合
+    if (data) setMatches(data);
+  }
+
   async function addPlayer() {
     if (!name) return;
     await supabase.from("players").insert([{ name, rating: initialRating }]);
     setName("");
-    setInitialRating(1500); // 入力後は再び1500に戻す
+    setInitialRating(1500);
     fetchPlayers();
   }
 
+  // 試合登録
   async function recordMatch() {
     if (!winner || !loser) {
       alert("勝者と敗者を選んでください");
@@ -48,7 +67,6 @@ export default function Home() {
 
     const w = players.find((p) => p.id === winner);
     const l = players.find((p) => p.id === loser);
-
     if (!w || !l) return;
 
     // Elo レート計算
@@ -62,16 +80,55 @@ export default function Home() {
     await supabase.from("players").update({ rating: Math.round(newWRating) }).eq("id", w.id);
     await supabase.from("players").update({ rating: Math.round(newLRating) }).eq("id", l.id);
 
-    await supabase.from("matches").insert([{ winner_id: w.id, loser_id: l.id }]);
+    const { data } = await supabase
+      .from("matches")
+      .insert([{ winner_id: w.id, loser_id: l.id }])
+      .select();
+
+    if (data) {
+      setMatches([data[0], ...matches].slice(0, 3)); // state に即反映
+    }
 
     fetchPlayers();
+  }
+
+  // 試合取り消し（Eloも戻す）
+  async function deleteMatch(matchId: string) {
+    // 直近3試合から対象を探す
+    const match = matches.find((m) => m.id === matchId);
+    if (!match) return;
+
+    const w = players.find((p) => p.id === match.winner_id);
+    const l = players.find((p) => p.id === match.loser_id);
+    if (!w || !l) return;
+
+    // Elo を「元に戻す」
+    const k = 32;
+    const expectedW = 1 / (1 + Math.pow(10, (l.rating - w.rating) / 400));
+    const expectedL = 1 / (1 + Math.pow(10, (w.rating - l.rating) / 400));
+
+    const oldWRating = w.rating - k * (1 - expectedW);
+    const oldLRating = l.rating - k * (0 - expectedL);
+
+    await supabase.from("players").update({ rating: Math.round(oldWRating) }).eq("id", w.id);
+    await supabase.from("players").update({ rating: Math.round(oldLRating) }).eq("id", l.id);
+
+    // 試合削除
+    await supabase.from("matches").delete().eq("id", matchId);
+
+    fetchPlayers();
+    fetchMatches();
+  }
+
+  function getPlayerName(id: string) {
+    return players.find((p) => p.id === id)?.name || "不明";
   }
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center py-10 px-4 text-gray-900">
       <h1 className="text-3xl font-bold mb-8">🏓 卓球レーティング管理</h1>
 
-      {/* 選手登録フォーム */}
+      {/* 選手登録 */}
       <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md mb-8">
         <h2 className="text-xl font-semibold mb-4">選手登録</h2>
         <div className="flex flex-col gap-4">
@@ -97,11 +154,10 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 試合結果入力フォーム */}
+      {/* 試合結果入力 */}
       <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md mb-8">
         <h2 className="text-xl font-semibold mb-4">試合結果入力</h2>
         <div className="flex flex-col gap-4">
-          {/* 勝者 */}
           <select
             value={winner}
             onChange={(e) => setWinner(e.target.value)}
@@ -115,7 +171,6 @@ export default function Home() {
             ))}
           </select>
 
-          {/* 敗者 */}
           <select
             value={loser}
             onChange={(e) => setLoser(e.target.value)}
@@ -136,6 +191,30 @@ export default function Home() {
             結果を登録
           </button>
         </div>
+      </div>
+
+      {/* 直近の試合結果 */}
+      <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-2xl mb-8">
+        <h2 className="text-xl font-semibold mb-4">直近の試合結果</h2>
+        {matches.length === 0 ? (
+          <p className="text-gray-500">まだ試合が登録されていません</p>
+        ) : (
+          <ul className="space-y-2">
+            {matches.map((m) => (
+              <li key={m.id} className="flex justify-between items-center border-b pb-2">
+                <span>
+                  🏆 {getPlayerName(m.winner_id)} vs {getPlayerName(m.loser_id)}
+                </span>
+                <button
+                  onClick={() => deleteMatch(m.id)}
+                  className="text-red-500 hover:underline"
+                >
+                  取り消し
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* 選手一覧 */}
