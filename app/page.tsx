@@ -80,21 +80,20 @@ export default function Home() {
     await supabase.from("players").update({ rating: Math.round(newWRating) }).eq("id", w.id);
     await supabase.from("players").update({ rating: Math.round(newLRating) }).eq("id", l.id);
 
-    const { data } = await supabase
-      .from("matches")
-      .insert([{ winner_id: w.id, loser_id: l.id }])
-      .select();
+    // DBに試合を追加
+    await supabase.from("matches").insert([{ winner_id: w.id, loser_id: l.id }]);
 
-    if (data) {
-      setMatches([data[0], ...matches].slice(0, 3)); // state に即反映
-    }
+    // 必ず最新を取得
+    await fetchPlayers();
+    await fetchMatches();
 
-    fetchPlayers();
+    // 入力欄リセット
+    setWinner("");
+    setLoser("");
   }
 
   // 試合取り消し（Eloも戻す）
   async function deleteMatch(matchId: string) {
-    // 直近3試合から対象を探す
     const match = matches.find((m) => m.id === matchId);
     if (!match) return;
 
@@ -102,7 +101,7 @@ export default function Home() {
     const l = players.find((p) => p.id === match.loser_id);
     if (!w || !l) return;
 
-    // Elo を「元に戻す」
+    // Elo を元に戻す
     const k = 32;
     const expectedW = 1 / (1 + Math.pow(10, (l.rating - w.rating) / 400));
     const expectedL = 1 / (1 + Math.pow(10, (w.rating - l.rating) / 400));
@@ -113,11 +112,12 @@ export default function Home() {
     await supabase.from("players").update({ rating: Math.round(oldWRating) }).eq("id", w.id);
     await supabase.from("players").update({ rating: Math.round(oldLRating) }).eq("id", l.id);
 
-    // 試合削除
+    // DBから削除
     await supabase.from("matches").delete().eq("id", matchId);
 
-    fetchPlayers();
-    fetchMatches();
+    // 最新を再取得
+    await fetchPlayers();
+    await fetchMatches();
   }
 
   function getPlayerName(id: string) {
