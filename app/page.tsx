@@ -18,7 +18,7 @@ type Match = {
 
 export default function Home() {
   const [players, setPlayers] = useState<Player[]>([]);
-  const [matches, setMatches] = useState<Match[]>([]);
+  const [lastMatch, setLastMatch] = useState<Match | null>(null);
   const [name, setName] = useState("");
   const [initialRating, setInitialRating] = useState(1500);
   const [winner, setWinner] = useState("");
@@ -26,7 +26,7 @@ export default function Home() {
 
   useEffect(() => {
     fetchPlayers();
-    fetchMatches();
+    fetchLastMatch();
   }, []);
 
   async function fetchPlayers() {
@@ -37,13 +37,17 @@ export default function Home() {
     if (data) setPlayers(data);
   }
 
-  async function fetchMatches() {
+  async function fetchLastMatch() {
     const { data } = await supabase
       .from("matches")
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(3); // 直近3試合
-    if (data) setMatches(data);
+      .limit(1); // 最新1件だけ取得
+    if (data && data.length > 0) {
+      setLastMatch(data[0]);
+    } else {
+      setLastMatch(null);
+    }
   }
 
   async function addPlayer() {
@@ -83,41 +87,13 @@ export default function Home() {
     // DBに試合を追加
     await supabase.from("matches").insert([{ winner_id: w.id, loser_id: l.id }]);
 
-    // 必ず最新を取得
+    // 最新情報に更新
     await fetchPlayers();
-    await fetchMatches();
+    await fetchLastMatch();
 
     // 入力欄リセット
     setWinner("");
     setLoser("");
-  }
-
-  // 試合取り消し（Eloも戻す）
-  async function deleteMatch(matchId: string) {
-    const match = matches.find((m) => m.id === matchId);
-    if (!match) return;
-
-    const w = players.find((p) => p.id === match.winner_id);
-    const l = players.find((p) => p.id === match.loser_id);
-    if (!w || !l) return;
-
-    // Elo を元に戻す
-    const k = 32;
-    const expectedW = 1 / (1 + Math.pow(10, (l.rating - w.rating) / 400));
-    const expectedL = 1 / (1 + Math.pow(10, (w.rating - l.rating) / 400));
-
-    const oldWRating = w.rating - k * (1 - expectedW);
-    const oldLRating = l.rating - k * (0 - expectedL);
-
-    await supabase.from("players").update({ rating: Math.round(oldWRating) }).eq("id", w.id);
-    await supabase.from("players").update({ rating: Math.round(oldLRating) }).eq("id", l.id);
-
-    // DBから削除
-    await supabase.from("matches").delete().eq("id", matchId);
-
-    // 最新を再取得
-    await fetchPlayers();
-    await fetchMatches();
   }
 
   function getPlayerName(id: string) {
@@ -196,24 +172,12 @@ export default function Home() {
       {/* 直近の試合結果 */}
       <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-2xl mb-8">
         <h2 className="text-xl font-semibold mb-4">直近の試合結果</h2>
-        {matches.length === 0 ? (
-          <p className="text-gray-500">まだ試合が登録されていません</p>
+        {lastMatch ? (
+          <p>
+            🏆 {getPlayerName(lastMatch.winner_id)} vs {getPlayerName(lastMatch.loser_id)}
+          </p>
         ) : (
-          <ul className="space-y-2">
-            {matches.map((m) => (
-              <li key={m.id} className="flex justify-between items-center border-b pb-2">
-                <span>
-                  🏆 {getPlayerName(m.winner_id)} vs {getPlayerName(m.loser_id)}
-                </span>
-                <button
-                  onClick={() => deleteMatch(m.id)}
-                  className="text-red-500 hover:underline"
-                >
-                  取り消し
-                </button>
-              </li>
-            ))}
-          </ul>
+          <p className="text-gray-500">まだ試合が登録されていません</p>
         )}
       </div>
 
