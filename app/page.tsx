@@ -9,24 +9,16 @@ type Player = {
   rating: number;
 };
 
-type Match = {
-  id: string;
-  winner_id: string;
-  loser_id: string;
-  created_at: string;
-};
-
 export default function Home() {
   const [players, setPlayers] = useState<Player[]>([]);
-  const [lastMatch, setLastMatch] = useState<Match | null>(null);
   const [name, setName] = useState("");
   const [initialRating, setInitialRating] = useState(1500);
   const [winner, setWinner] = useState("");
   const [loser, setLoser] = useState("");
+  const [message, setMessage] = useState(""); // ✅ 登録完了メッセージ用
 
   useEffect(() => {
     fetchPlayers();
-    fetchLastMatch();
   }, []);
 
   async function fetchPlayers() {
@@ -35,19 +27,6 @@ export default function Home() {
       .select("*")
       .order("rating", { ascending: false });
     if (data) setPlayers(data);
-  }
-
-  async function fetchLastMatch() {
-    const { data } = await supabase
-      .from("matches")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(1); // 最新1件だけ取得
-    if (data && data.length > 0) {
-      setLastMatch(data[0]);
-    } else {
-      setLastMatch(null);
-    }
   }
 
   async function addPlayer() {
@@ -89,20 +68,28 @@ export default function Home() {
 
     // 最新情報に更新
     await fetchPlayers();
-    await fetchLastMatch();
+
+    // ✅ 完了メッセージを表示
+    setMessage(`${w.name} VS ${l.name} の試合結果を送信しました！`);
 
     // 入力欄リセット
     setWinner("");
     setLoser("");
-  }
 
-  function getPlayerName(id: string) {
-    return players.find((p) => p.id === id)?.name || "不明";
+    // ✅ 5秒後にメッセージを消す
+    setTimeout(() => setMessage(""), 5000);
   }
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center py-10 px-4 text-gray-900">
       <h1 className="text-3xl font-bold mb-8">🏓 卓球レーティング管理</h1>
+
+      {/* ✅ 完了メッセージ */}
+      {message && (
+        <div className="mb-6 p-4 bg-green-100 border border-green-400 text-green-800 rounded">
+          {message}
+        </div>
+      )}
 
       {/* 選手登録 */}
       <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md mb-8">
@@ -167,18 +154,6 @@ export default function Home() {
             結果を登録
           </button>
         </div>
-      </div>
-
-      {/* 直近の試合結果 */}
-      <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-2xl mb-8">
-        <h2 className="text-xl font-semibold mb-4">直近の試合結果</h2>
-        {lastMatch ? (
-          <p>
-            🏆 {getPlayerName(lastMatch.winner_id)} vs {getPlayerName(lastMatch.loser_id)}
-          </p>
-        ) : (
-          <p className="text-gray-500">まだ試合が登録されていません</p>
-        )}
       </div>
 
       {/* 選手一覧 */}
