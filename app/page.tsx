@@ -8,6 +8,7 @@ type Player = {
   name: string;
   rating: number;
   team: string;
+  role: string; // ✅ 「選手」 or 「コーチ」
 };
 
 export default function Home() {
@@ -22,25 +23,28 @@ export default function Home() {
     fetchPlayers();
   }, []);
 
+  // ✅ P-CONNECT のみ取得
   async function fetchPlayers() {
     const { data } = await supabase
       .from("players")
       .select("*")
-      .eq("team", "P-CONNECT")   // ✅ このチームだけ
+      .eq("team", "P-CONNECT")
       .order("rating", { ascending: false });
     if (data) setPlayers(data);
   }
 
+  // ✅ 新規登録時は「選手」固定
   async function addPlayer() {
     if (!name) return;
     await supabase.from("players").insert([
-      { name, rating: initialRating, team: "P-CONNECT" }  // ✅ チーム名を保存
+      { name, rating: initialRating, team: "P-CONNECT", role: "選手" },
     ]);
     setName("");
     setInitialRating(1500);
     fetchPlayers();
   }
 
+  // ✅ 試合結果登録
   async function recordMatch() {
     if (!winner || !loser) {
       alert("勝者と敗者を選んでください");
@@ -62,8 +66,14 @@ export default function Home() {
     const newWRating = w.rating + k * (1 - expectedW);
     const newLRating = l.rating + k * (0 - expectedL);
 
-    await supabase.from("players").update({ rating: Math.round(newWRating) }).eq("id", w.id);
-    await supabase.from("players").update({ rating: Math.round(newLRating) }).eq("id", l.id);
+    await supabase
+      .from("players")
+      .update({ rating: Math.round(newWRating) })
+      .eq("id", w.id);
+    await supabase
+      .from("players")
+      .update({ rating: Math.round(newLRating) })
+      .eq("id", l.id);
 
     await supabase.from("matches").insert([{ winner_id: w.id, loser_id: l.id }]);
 
@@ -77,15 +87,18 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center py-10 px-4 text-gray-900">
-      <h1 className="text-3xl font-bold mb-8">🏓 卓球レーティング管理 (P-CONNECT専用)</h1>
+      <h1 className="text-3xl font-bold mb-8">
+        🏓 卓球レーティング管理 (P-CONNECT専用)
+      </h1>
 
+      {/* ✅ メッセージ */}
       {message && (
         <div className="mb-6 p-4 bg-green-100 border border-green-400 text-green-800 rounded">
           {message}
         </div>
       )}
 
-      {/* 選手登録 */}
+      {/* ✅ 選手登録フォーム */}
       <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md mb-8">
         <h2 className="text-xl font-semibold mb-4">選手登録</h2>
         <div className="flex flex-col gap-4">
@@ -111,10 +124,11 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 試合結果入力 */}
+      {/* ✅ 試合結果入力 */}
       <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md mb-8">
         <h2 className="text-xl font-semibold mb-4">試合結果入力</h2>
         <div className="flex flex-col gap-4">
+          {/* 勝者 */}
           <select
             value={winner}
             onChange={(e) => setWinner(e.target.value)}
@@ -123,11 +137,12 @@ export default function Home() {
             <option value="">勝者を選択</option>
             {players.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.name}
+                {p.name} ({p.role})
               </option>
             ))}
           </select>
 
+          {/* 敗者 */}
           <select
             value={loser}
             onChange={(e) => setLoser(e.target.value)}
@@ -136,7 +151,7 @@ export default function Home() {
             <option value="">敗者を選択</option>
             {players.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.name}
+                {p.name} ({p.role})
               </option>
             ))}
           </select>
@@ -150,7 +165,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 選手一覧 */}
+      {/* ✅ 順位一覧（選手のみ） */}
       <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-2xl">
         <h2 className="text-xl font-semibold mb-4">選手一覧 (P-CONNECT)</h2>
         <table className="w-full border-collapse">
@@ -158,17 +173,24 @@ export default function Home() {
             <tr>
               <th className="p-2">名前</th>
               <th className="p-2">チーム</th>
+              <th className="p-2">役割</th>
               <th className="p-2">レート</th>
             </tr>
           </thead>
           <tbody>
-            {players.map((p) => (
-              <tr key={p.id} className="border-b hover:bg-gray-50 text-gray-900">
-                <td className="p-2">{p.name}</td>
-                <td className="p-2">{p.team}</td>
-                <td className="p-2">{p.rating}</td>
-              </tr>
-            ))}
+            {players
+              .filter((p) => p.role === "選手") // ✅ 選手のみ
+              .map((p) => (
+                <tr
+                  key={p.id}
+                  className="border-b hover:bg-gray-50 text-gray-900"
+                >
+                  <td className="p-2">{p.name}</td>
+                  <td className="p-2">{p.team}</td>
+                  <td className="p-2">{p.role}</td>
+                  <td className="p-2">{p.rating}</td>
+                </tr>
+              ))}
           </tbody>
         </table>
       </div>
