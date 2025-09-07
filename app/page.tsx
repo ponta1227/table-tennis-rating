@@ -165,7 +165,7 @@ export default function Home() {
 
       {/* ✅ 順位一覧（選手＋OB） */}
       <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-2xl">
-        <h2 className="text-xl font-semibold mb-4">ランキング（選手＋OB）</h2>
+        <h2 className="text-xl font-semibold mb-4">ランキング</h2>
         <table className="w-full border-collapse">
           <thead className="bg-gray-200">
             <tr>
@@ -176,7 +176,7 @@ export default function Home() {
           </thead>
           <tbody>
             {players
-              .filter((p) => p.role === "選手" || p.role === "OB")
+              .filter((p) => p.role === "選手" )
               .map((p, index) => (
                 <tr key={p.id} className="border-b hover:bg-gray-50 text-gray-900">
                   <td className="p-2">{index + 1}</td>
