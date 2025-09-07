@@ -7,6 +7,7 @@ type Player = {
   id: string;
   name: string;
   rating: number;
+  team: string;
 };
 
 export default function Home() {
@@ -15,7 +16,7 @@ export default function Home() {
   const [initialRating, setInitialRating] = useState(1500);
   const [winner, setWinner] = useState("");
   const [loser, setLoser] = useState("");
-  const [message, setMessage] = useState(""); // ✅ 登録完了メッセージ用
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     fetchPlayers();
@@ -25,19 +26,21 @@ export default function Home() {
     const { data } = await supabase
       .from("players")
       .select("*")
+      .eq("team", "P-CONNECT")   // ✅ このチームだけ
       .order("rating", { ascending: false });
     if (data) setPlayers(data);
   }
 
   async function addPlayer() {
     if (!name) return;
-    await supabase.from("players").insert([{ name, rating: initialRating }]);
+    await supabase.from("players").insert([
+      { name, rating: initialRating, team: "P-CONNECT" }  // ✅ チーム名を保存
+    ]);
     setName("");
     setInitialRating(1500);
     fetchPlayers();
   }
 
-  // 試合登録
   async function recordMatch() {
     if (!winner || !loser) {
       alert("勝者と敗者を選んでください");
@@ -52,7 +55,6 @@ export default function Home() {
     const l = players.find((p) => p.id === loser);
     if (!w || !l) return;
 
-    // Elo レート計算
     const k = 32;
     const expectedW = 1 / (1 + Math.pow(10, (l.rating - w.rating) / 400));
     const expectedL = 1 / (1 + Math.pow(10, (w.rating - l.rating) / 400));
@@ -63,28 +65,20 @@ export default function Home() {
     await supabase.from("players").update({ rating: Math.round(newWRating) }).eq("id", w.id);
     await supabase.from("players").update({ rating: Math.round(newLRating) }).eq("id", l.id);
 
-    // DBに試合を追加
     await supabase.from("matches").insert([{ winner_id: w.id, loser_id: l.id }]);
 
-    // 最新情報に更新
     await fetchPlayers();
 
-    // ✅ 完了メッセージを表示
     setMessage(`${w.name} VS ${l.name} の試合結果を送信しました！`);
-
-    // 入力欄リセット
     setWinner("");
     setLoser("");
-
-    // ✅ 5秒後にメッセージを消す
     setTimeout(() => setMessage(""), 5000);
   }
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center py-10 px-4 text-gray-900">
-      <h1 className="text-3xl font-bold mb-8">🏓 卓球レーティング管理</h1>
+      <h1 className="text-3xl font-bold mb-8">🏓 卓球レーティング管理 (P-CONNECT専用)</h1>
 
-      {/* ✅ 完了メッセージ */}
       {message && (
         <div className="mb-6 p-4 bg-green-100 border border-green-400 text-green-800 rounded">
           {message}
@@ -158,11 +152,12 @@ export default function Home() {
 
       {/* 選手一覧 */}
       <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-2xl">
-        <h2 className="text-xl font-semibold mb-4">選手一覧</h2>
+        <h2 className="text-xl font-semibold mb-4">選手一覧 (P-CONNECT)</h2>
         <table className="w-full border-collapse">
           <thead className="bg-gray-200">
             <tr>
               <th className="p-2">名前</th>
+              <th className="p-2">チーム</th>
               <th className="p-2">レート</th>
             </tr>
           </thead>
@@ -170,6 +165,7 @@ export default function Home() {
             {players.map((p) => (
               <tr key={p.id} className="border-b hover:bg-gray-50 text-gray-900">
                 <td className="p-2">{p.name}</td>
+                <td className="p-2">{p.team}</td>
                 <td className="p-2">{p.rating}</td>
               </tr>
             ))}
