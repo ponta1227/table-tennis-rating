@@ -8,7 +8,7 @@ type Player = {
   name: string;
   rating: number;
   team: string;
-  role: string; // ✅ 「選手」 or 「コーチ」
+  role: string; // 「選手」or「コーチ」or「OB」
 };
 
 export default function Home() {
@@ -128,7 +128,6 @@ export default function Home() {
       <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md mb-8">
         <h2 className="text-xl font-semibold mb-4">試合結果入力</h2>
         <div className="flex flex-col gap-4">
-          {/* 勝者 */}
           <select
             value={winner}
             onChange={(e) => setWinner(e.target.value)}
@@ -137,12 +136,11 @@ export default function Home() {
             <option value="">勝者を選択</option>
             {players.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.name} ({p.role})
+                {p.name}
               </option>
             ))}
           </select>
 
-          {/* 敗者 */}
           <select
             value={loser}
             onChange={(e) => setLoser(e.target.value)}
@@ -151,7 +149,7 @@ export default function Home() {
             <option value="">敗者を選択</option>
             {players.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.name} ({p.role})
+                {p.name}
               </option>
             ))}
           </select>
@@ -165,29 +163,24 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ✅ 順位一覧（選手のみ） */}
+      {/* ✅ 順位一覧（選手＋OB） */}
       <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-2xl">
-        <h2 className="text-xl font-semibold mb-4">選手一覧 (P-CONNECT)</h2>
+        <h2 className="text-xl font-semibold mb-4">ランキング（選手＋OB）</h2>
         <table className="w-full border-collapse">
           <thead className="bg-gray-200">
             <tr>
+              <th className="p-2">順位</th>
               <th className="p-2">名前</th>
-              <th className="p-2">チーム</th>
-              <th className="p-2">役割</th>
               <th className="p-2">レート</th>
             </tr>
           </thead>
           <tbody>
             {players
-              .filter((p) => p.role === "選手") // ✅ 選手のみ
-              .map((p) => (
-                <tr
-                  key={p.id}
-                  className="border-b hover:bg-gray-50 text-gray-900"
-                >
+              .filter((p) => p.role === "選手" || p.role === "OB")
+              .map((p, index) => (
+                <tr key={p.id} className="border-b hover:bg-gray-50 text-gray-900">
+                  <td className="p-2">{index + 1}</td>
                   <td className="p-2">{p.name}</td>
-                  <td className="p-2">{p.team}</td>
-                  <td className="p-2">{p.role}</td>
                   <td className="p-2">{p.rating}</td>
                 </tr>
               ))}

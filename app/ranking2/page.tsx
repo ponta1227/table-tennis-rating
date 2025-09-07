@@ -29,24 +29,20 @@ export default function Ranking2() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center py-10 px-4 text-gray-900">
-      <h1 className="text-3xl font-bold mb-8">🏓 P-CONNECT ランキング（選手＋コーチ）</h1>
-      <table className="w-full max-w-2xl border-collapse bg-white shadow-md rounded-lg">
+      <h1 className="text-3xl font-bold mb-8">🏓 P-CONNECT ランキング（全員）</h1>
+      <table className="w-full max-w-2xl border-collapse bg-white shadow-md rounded-lg text-lg">
         <thead className="bg-gray-200">
           <tr>
             <th className="p-2">順位</th>
             <th className="p-2">名前</th>
-            <th className="p-2">チーム</th>
-            <th className="p-2">役割</th>
             <th className="p-2">レート</th>
           </tr>
         </thead>
         <tbody>
           {players.map((p, index) => (
-            <tr key={p.id} className="border-b hover:bg-gray-50">
+            <tr key={p.id} className="border-b hover:bg-gray-50 text-gray-900">
               <td className="p-2">{index + 1}</td>
               <td className="p-2">{p.name}</td>
-              <td className="p-2">{p.team}</td>
-              <td className="p-2">{p.role}</td>
               <td className="p-2">{p.rating}</td>
             </tr>
           ))}
